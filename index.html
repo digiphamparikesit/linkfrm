@@ -3,297 +3,65 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Link Note - Simpan Tautan</title>
+<title>Link Note - Supabase Edition</title>
+<!-- Supabase JS Library -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Segoe UI', Tahoma, sans-serif;
-  }
-
-  body {
-    min-height: 100vh;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 20px;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-  }
-
-  .container {
-    background: #fff;
-    width: 100%;
-    max-width: 640px;
-    border-radius: 16px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-    padding: 30px;
-    margin-top: 20px;
-  }
-
-  h1 {
-    text-align: center;
-    color: #333;
-    margin-bottom: 8px;
-    font-size: 1.8rem;
-  }
-
-  .subtitle {
-    text-align: center;
-    color: #888;
-    font-size: 0.9rem;
-    margin-bottom: 25px;
-  }
-
-  .form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-bottom: 20px;
-  }
-
-  .row {
-    display: flex;
-    gap: 10px;
-  }
-
-  #titleInput,
-  #linkInput,
-  #searchInput {
-    flex: 1;
-    padding: 14px 16px;
-    border: 2px solid #e0e0e0;
-    border-radius: 10px;
-    font-size: 1rem;
-    outline: none;
-    transition: border-color 0.3s;
-  }
-
-  #titleInput:focus,
-  #linkInput:focus,
-  #searchInput:focus {
-    border-color: #667eea;
-  }
-
-  #saveBtn {
-    padding: 14px 24px;
-    background: #667eea;
-    color: #fff;
-    border: none;
-    border-radius: 10px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.3s, transform 0.1s;
-    white-space: nowrap;
-  }
-
-  #saveBtn:hover {
-    background: #5568d3;
-  }
-
-  #saveBtn:active {
-    transform: scale(0.97);
-  }
-
-  .search-box {
-    position: relative;
-    margin-bottom: 20px;
-  }
-
-  .search-box::before {
-    content: '🔍';
-    position: absolute;
-    left: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 1rem;
-    opacity: 0.6;
-    pointer-events: none;
-  }
-
-  #searchInput {
-    width: 100%;
-    padding-left: 42px;
-  }
-
-  .link-list {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .link-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    background: #f7f8fc;
-    padding: 14px 16px;
-    border-radius: 10px;
-    border-left: 4px solid #667eea;
-    animation: fadeIn 0.3s ease;
-    transition: transform 0.2s;
-  }
-
-  .link-item:hover {
-    transform: translateX(4px);
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-8px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .link-content {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .link-title {
-    font-weight: 600;
-    color: #333;
-    font-size: 1rem;
-    word-break: break-word;
-  }
-
-  .link-title .highlight {
-    background: #fff59d;
-    border-radius: 3px;
-    padding: 0 2px;
-  }
-
-  .link-url {
-    color: #667eea;
-    text-decoration: none;
-    word-break: break-all;
-    font-size: 0.85rem;
-    transition: color 0.2s;
-  }
-
-  .link-url:hover {
-    color: #5568d3;
-    text-decoration: underline;
-  }
-
-  .delete-btn {
-    background: transparent;
-    border: none;
-    color: #e74c3c;
-    font-size: 1.2rem;
-    cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 6px;
-    transition: background 0.2s;
-    flex-shrink: 0;
-  }
-
-  .delete-btn:hover {
-    background: #fdecea;
-  }
-
-  .empty-msg {
-    text-align: center;
-    color: #aaa;
-    padding: 30px 0;
-    font-style: italic;
-    display: none;
-  }
-
-  .empty-msg.show {
-    display: block;
-  }
-
-  .search-info {
-    text-align: center;
-    color: #888;
-    font-size: 0.85rem;
-    margin-bottom: 12px;
-    display: none;
-  }
-
-  .search-info.show {
-    display: block;
-  }
-
-  .search-info strong {
-    color: #667eea;
-  }
-
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+  body { min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; display: flex; justify-content: center; align-items: flex-start; }
+  .container { background: #fff; width: 100%; max-width: 640px; border-radius: 16px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2); padding: 30px; margin-top: 20px; position: relative; }
+  h1 { text-align: center; color: #333; margin-bottom: 8px; font-size: 1.8rem; }
+  .subtitle { text-align: center; color: #888; font-size: 0.9rem; margin-bottom: 25px; }
+  .form-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .row { display: flex; gap: 10px; }
+  #titleInput, #linkInput, #searchInput { flex: 1; padding: 14px 16px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 1rem; outline: none; transition: border-color 0.3s; }
+  #titleInput:focus, #linkInput:focus, #searchInput:focus { border-color: #667eea; }
+  #saveBtn { padding: 14px 24px; background: #667eea; color: #fff; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.3s, transform 0.1s; white-space: nowrap; }
+  #saveBtn:hover { background: #5568d3; }
+  #saveBtn:active { transform: scale(0.97); }
+  #saveBtn:disabled { background: #aaa; cursor: not-allowed; }
+  .search-box { position: relative; margin-bottom: 20px; }
+  .search-box::before { content: '🔍'; position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 1rem; opacity: 0.6; pointer-events: none; }
+  #searchInput { width: 100%; padding-left: 42px; }
+  .link-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+  .link-item { display: flex; align-items: flex-start; gap: 12px; background: #f7f8fc; padding: 14px 16px; border-radius: 10px; border-left: 4px solid #667eea; animation: fadeIn 0.3s ease; transition: transform 0.2s; }
+  .link-item:hover { transform: translateX(4px); }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+  .link-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .link-title { font-weight: 600; color: #333; font-size: 1rem; word-break: break-word; }
+  .link-title .highlight { background: #fff59d; border-radius: 3px; padding: 0 2px; }
+  .link-url { color: #667eea; text-decoration: none; word-break: break-all; font-size: 0.85rem; transition: color 0.2s; }
+  .link-url:hover { color: #5568d3; text-decoration: underline; }
+  .delete-btn { background: transparent; border: none; color: #e74c3c; font-size: 1.2rem; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s; flex-shrink: 0; }
+  .delete-btn:hover { background: #fdecea; }
+  .empty-msg { text-align: center; color: #aaa; padding: 30px 0; font-style: italic; display: none; }
+  .empty-msg.show { display: block; }
+  .search-info { text-align: center; color: #888; font-size: 0.85rem; margin-bottom: 12px; display: none; }
+  .search-info.show { display: block; }
+  .search-info strong { color: #667eea; }
   /* PAGINATION */
-  .pagination {
-    display: none;
-    justify-content: center;
-    align-items: center;
-    gap: 6px;
-    margin-top: 22px;
-    flex-wrap: wrap;
-  }
-
-  .pagination.show {
-    display: flex;
-  }
-
-  .pagination button {
-    min-width: 38px;
-    height: 38px;
-    padding: 0 10px;
-    border: 2px solid #e0e0e0;
-    background: #fff;
-    color: #555;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .pagination button:hover:not(:disabled):not(.active) {
-    border-color: #667eea;
-    color: #667eea;
-  }
-
-  .pagination button.active {
-    background: #667eea;
-    border-color: #667eea;
-    color: #fff;
-    cursor: default;
-  }
-
-  .pagination button:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  .pagination .ellipsis {
-    padding: 0 4px;
-    color: #aaa;
-    font-weight: 600;
-  }
-
-  @media (max-width: 480px) {
-    .row {
-      flex-direction: column;
-    }
-    #saveBtn {
-      width: 100%;
-    }
-    .pagination button {
-      min-width: 34px;
-      height: 34px;
-      font-size: 0.85rem;
-    }
-  }
+  .pagination { display: none; justify-content: center; align-items: center; gap: 6px; margin-top: 22px; flex-wrap: wrap; }
+  .pagination.show { display: flex; }
+  .pagination button { min-width: 38px; height: 38px; padding: 0 10px; border: 2px solid #e0e0e0; background: #fff; color: #555; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .pagination button:hover:not(:disabled):not(.active) { border-color: #667eea; color: #667eea; }
+  .pagination button.active { background: #667eea; border-color: #667eea; color: #fff; cursor: default; }
+  .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .pagination .ellipsis { padding: 0 4px; color: #aaa; font-weight: 600; }
+  /* DEBUG PANEL */
+  #debugPanel { margin-top: 25px; padding: 12px; background: #1e1e1e; color: #0f0; border-radius: 8px; font-family: monospace; font-size: 0.75rem; max-height: 150px; overflow-y: auto; display: none; border: 2px solid #333; }
+  #debugPanel.show { display: block; }
+  #debugPanel .log-entry { margin-bottom: 4px; border-bottom: 1px solid #333; padding-bottom: 2px; }
+  #debugPanel .log-time { color: #888; margin-right: 8px; }
+  #debugPanel .log-error { color: #ff5555; }
+  #debugPanel .log-success { color: #55ff55; }
+  @media (max-width: 480px) { .row { flex-direction: column; } #saveBtn { width: 100%; } .pagination button { min-width: 34px; height: 34px; font-size: 0.85rem; } }
 </style>
 </head>
 <body>
 
 <div class="container">
-  <h1>🔗 Link Note</h1>
-  <p class="subtitle">Simpan tautan penting Anda di sini</p>
+  <h1>🔗 Link Note (Cloud)</h1>
+  <p class="subtitle">Tersimpan di Supabase • Bisa diakses dari mana saja</p>
 
   <div class="form-group">
     <input type="text" id="titleInput" placeholder="Judul link (contoh: Google)" />
@@ -310,12 +78,24 @@
   <p class="search-info" id="searchInfo"></p>
 
   <ul class="link-list" id="linkList"></ul>
-  <p class="empty-msg" id="emptyMsg">Belum ada link tersimpan.</p>
+  <p class="empty-msg" id="emptyMsg">Memuat data atau belum ada link...</p>
 
   <div class="pagination" id="pagination"></div>
+
+  <!-- DEBUG PANEL -->
+  <div id="debugPanel">
+    <div style="color:#fff; margin-bottom:5px;">🐞 Debug Log:</div>
+  </div>
 </div>
 
 <script>
+  // ============ KONFIGURASI SUPABASE ============
+const SUPABASE_URL = 'https://ztwquwwjrqltxrrgwgvv.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0d3F1d3dqcnFsdHhycmd3Z3Z2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3MDM0NjEsImV4cCI6MjEwODI3OTQ2MX0.q_hX2wg8nWO8wX7ci9Euy5IQqydBHiUy5s_56yLbL4U';
+  
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // ============ ELEMEN DOM ============
   const titleInput = document.getElementById('titleInput');
   const linkInput = document.getElementById('linkInput');
   const searchInput = document.getElementById('searchInput');
@@ -324,189 +104,82 @@
   const emptyMsg = document.getElementById('emptyMsg');
   const searchInfo = document.getElementById('searchInfo');
   const pagination = document.getElementById('pagination');
+  const debugPanel = document.getElementById('debugPanel');
 
   const ITEMS_PER_PAGE = 10;
   let currentPage = 1;
+  let allLinks = []; // Menyimpan data dari Supabase
+  let isFetching = false;
 
-  // Ambil data dari localStorage (mendukung format lama & baru)
-  let links = JSON.parse(localStorage.getItem('savedLinks')) || [];
-  links = links.map(item =>
-    typeof item === 'string' ? { title: item, url: item } : item
-  );
-
-  // Simpan ke localStorage
-  function saveToStorage() {
-    localStorage.setItem('savedLinks', JSON.stringify(links));
+  // ============ UTILITAS DEBUG ============
+  function logDebug(msg, type = 'info') {
+    const time = new Date().toLocaleTimeString();
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    let colorClass = '';
+    if (type === 'error') colorClass = 'log-error';
+    if (type === 'success') colorClass = 'log-success';
+    entry.innerHTML = `<span class="log-time">[${time}]</span><span class="${colorClass}">${msg}</span>`;
+    debugPanel.appendChild(entry);
+    debugPanel.scrollTop = debugPanel.scrollHeight;
+    console.log(`[DEBUG] ${msg}`);
   }
 
-  // Escape HTML
-  function escapeHTML(str) {
-    return str.replace(/[&<>"']/g, (m) => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[m]));
+  // Tampilkan panel debug jika di URL ada ?debug=1
+  if (window.location.search.includes('debug=1')) {
+    debugPanel.classList.add('show');
   }
 
-  // Highlight teks cocok
-  function highlight(text, keyword) {
-    if (!keyword) return escapeHTML(text);
-    const escapedText = escapeHTML(text);
-    const escapedKeyword = escapeHTML(keyword).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp(`(${escapedKeyword})`, 'gi');
-    return escapedText.replace(regex, '<span class="highlight">$1</span>');
+  // ============ FUNGSI ANTI-FREEZE (TIMEOUT) ============
+  // Membungkus promise agar tidak menggantung selamanya
+  function withTimeout(promise, ms = 8000, label = 'Request') {
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timeout setelah ${ms}ms. Periksa koneksi atau status Supabase.`)), ms)
+    );
+    return Promise.race([promise, timeout]);
   }
 
-  // Ambil daftar link terfilter (berdasarkan judul)
-  function getFilteredLinks() {
-    const keyword = searchInput.value.trim().toLowerCase();
-    return links
-      .map((item, index) => ({ item, index }))
-      .filter(({ item }) =>
-        !keyword || (item.title || '').toLowerCase().includes(keyword)
+  // ============ FUNGSI UTAMA SUPABASE ============
+  
+  // Ambil data dari Supabase
+  async function fetchLinks() {
+    if (isFetching) return;
+    isFetching = true;
+    saveBtn.disabled = true;
+    emptyMsg.textContent = 'Memuat data dari server...';
+    emptyMsg.classList.add('show');
+    logDebug('Mengambil data dari Supabase...');
+
+    try {
+      const { data, error } = await withTimeout(
+        supabaseClient.from('links').select('*').order('created_at', { ascending: false }),
+        8000,
+        'Fetch Links'
       );
-  }
 
-  // Render halaman + pagination
-  function renderLinks() {
-    const keyword = searchInput.value.trim().toLowerCase();
-    const filtered = getFilteredLinks();
-
-    const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
-
-    // Pastikan currentPage valid
-    if (currentPage > totalPages) currentPage = totalPages;
-    if (currentPage < 1) currentPage = 1;
-
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    const pageItems = filtered.slice(start, start + ITEMS_PER_PAGE);
-
-    // Render list
-    linkList.innerHTML = '';
-
-    // Pesan kosong
-    if (links.length === 0) {
-      emptyMsg.textContent = 'Belum ada link tersimpan.';
-      emptyMsg.classList.add('show');
-    } else if (filtered.length === 0) {
-      emptyMsg.textContent = `Tidak ada link dengan judul mengandung "${searchInput.value.trim()}".`;
-      emptyMsg.classList.add('show');
-    } else {
-      emptyMsg.classList.remove('show');
-    }
-
-    // Info hasil pencarian
-    if (keyword && links.length > 0 && filtered.length > 0) {
-      searchInfo.innerHTML = `Menampilkan <strong>${filtered.length}</strong> dari <strong>${links.length}</strong> link`;
-      searchInfo.classList.add('show');
-    } else {
-      searchInfo.classList.remove('show');
-    }
-
-    // Render tiap item di halaman ini
-    pageItems.forEach(({ item, index }) => {
-      const li = document.createElement('li');
-      li.className = 'link-item';
-
-      const content = document.createElement('div');
-      content.className = 'link-content';
-
-      const title = document.createElement('span');
-      title.className = 'link-title';
-      title.innerHTML = highlight(item.title || item.url, keyword);
-
-      const a = document.createElement('a');
-      a.className = 'link-url';
-      a.href = item.url;
-      a.textContent = item.url;
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
-
-      content.appendChild(title);
-      content.appendChild(a);
-
-      const delBtn = document.createElement('button');
-      delBtn.className = 'delete-btn';
-      delBtn.innerHTML = '🗑️';
-      delBtn.title = 'Hapus link';
-      delBtn.onclick = () => deleteLink(index);
-
-      li.appendChild(content);
-      li.appendChild(delBtn);
-      linkList.appendChild(li);
-    });
-
-    // Render pagination
-    renderPagination(totalPages, filtered.length);
-  }
-
-  // Render tombol-tombol pagination
-  function renderPagination(totalPages, totalItems) {
-    pagination.innerHTML = '';
-
-    // Sembunyikan jika hanya 1 halaman
-    if (totalItems <= ITEMS_PER_PAGE) {
-      pagination.classList.remove('show');
-      return;
-    }
-    pagination.classList.add('show');
-
-    // Tombol "Prev"
-    const prevBtn = document.createElement('button');
-    prevBtn.textContent = '‹';
-    prevBtn.disabled = currentPage === 1;
-    prevBtn.onclick = () => goToPage(currentPage - 1);
-    pagination.appendChild(prevBtn);
-
-    // Nomor halaman dengan ellipsis
-    const pages = getPageNumbers(currentPage, totalPages);
-
-    pages.forEach(p => {
-      if (p === '...') {
-        const span = document.createElement('span');
-        span.className = 'ellipsis';
-        span.textContent = '…';
-        pagination.appendChild(span);
+      if (error) {
+        logDebug(`Fetch error: ${error.message}`, 'error');
+        emptyMsg.textContent = `Gagal memuat: ${error.message}`;
+        emptyMsg.classList.add('show');
+        allLinks = [];
       } else {
-        const btn = document.createElement('button');
-        btn.textContent = p;
-        if (p === currentPage) btn.classList.add('active');
-        btn.onclick = () => goToPage(p);
-        pagination.appendChild(btn);
+        allLinks = data || [];
+        logDebug(`Berhasil memuat ${allLinks.length} link.`, 'success');
+        renderLinks();
       }
-    });
-
-    // Tombol "Next"
-    const nextBtn = document.createElement('button');
-    nextBtn.textContent = '›';
-    nextBtn.disabled = currentPage === totalPages;
-    nextBtn.onclick = () => goToPage(currentPage + 1);
-    pagination.appendChild(nextBtn);
-  }
-
-  // Logika nomor halaman (dengan ellipsis untuk halaman banyak)
-  function getPageNumbers(current, total) {
-    if (total <= 7) {
-      return Array.from({ length: total }, (_, i) => i + 1);
+    } catch (err) {
+      logDebug(`Fetch exception: ${err.message}`, 'error');
+      emptyMsg.textContent = `Error: ${err.message}`;
+      emptyMsg.classList.add('show');
+      allLinks = [];
+    } finally {
+      isFetching = false;
+      saveBtn.disabled = false;
     }
-    const pages = [];
-    if (current <= 4) {
-      pages.push(1, 2, 3, 4, 5, '...', total);
-    } else if (current >= total - 3) {
-      pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total);
-    } else {
-      pages.push(1, '...', current - 1, current, current + 1, '...', total);
-    }
-    return pages;
   }
 
-  // Pindah halaman
-  function goToPage(page) {
-    currentPage = page;
-    renderLinks();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  // Tambah link
-  function addLink() {
+  // Simpan link baru ke Supabase
+  async function addLink() {
     const title = titleInput.value.trim();
     let url = linkInput.value.trim();
 
@@ -527,46 +200,191 @@
       return;
     }
 
-    links.push({ title: title || url, url });
-    saveToStorage();
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Menyimpan...';
+    logDebug(`Menyimpan link baru: ${title || url}`);
 
-    titleInput.value = '';
-    linkInput.value = '';
-    titleInput.focus();
+    try {
+      const { data, error } = await withTimeout(
+        supabaseClient.from('links').insert([{ title: title || url, url: url }]).select(),
+        8000,
+        'Insert Link'
+      );
 
-    // Reset pencarian agar link baru terlihat
-    if (searchInput.value.trim()) {
-      searchInput.value = '';
+      if (error) {
+        logDebug(`Insert error: ${error.message}`, 'error');
+        alert(`Gagal menyimpan: ${error.message}`);
+      } else {
+        logDebug(`Link berhasil disimpan.`, 'success');
+        titleInput.value = '';
+        linkInput.value = '';
+        if (searchInput.value.trim()) searchInput.value = '';
+        currentPage = 1; // Reset ke halaman 1
+        await fetchLinks(); // Refresh data
+      }
+    } catch (err) {
+      logDebug(`Insert exception: ${err.message}`, 'error');
+      alert(`Error: ${err.message}`);
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Simpan';
     }
-
-    // Arahkan ke halaman terakhir agar link baru terlihat
-    currentPage = Math.ceil(links.length / ITEMS_PER_PAGE);
-    renderLinks();
   }
 
-  // Hapus link
-  function deleteLink(index) {
-    if (confirm('Hapus link ini?')) {
-      links.splice(index, 1);
-      saveToStorage();
-      renderLinks();
+  // Hapus link dari Supabase
+  async function deleteLink(id, title) {
+    if (!confirm(`Hapus link "${title}"?`)) return;
+
+    logDebug(`Menghapus link ID: ${id}`);
+    
+    try {
+      const { error } = await withTimeout(
+        supabaseClient.from('links').delete().eq('id', id),
+        8000,
+        'Delete Link'
+      );
+
+      if (error) {
+        logDebug(`Delete error: ${error.message}`, 'error');
+        alert(`Gagal menghapus: ${error.message}`);
+      } else {
+        logDebug(`Link ID ${id} berhasil dihapus.`, 'success');
+        await fetchLinks(); // Refresh data
+      }
+    } catch (err) {
+      logDebug(`Delete exception: ${err.message}`, 'error');
+      alert(`Error: ${err.message}`);
     }
   }
 
-  // Event listener
-  saveBtn.addEventListener('click', addLink);
-  searchInput.addEventListener('input', () => {
-    currentPage = 1; // reset ke halaman 1 saat mencari
-    renderLinks();
-  });
-  [titleInput, linkInput].forEach(input => {
-    input.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') addLink();
+  // ============ RENDER UI ============
+  function renderLinks() {
+    const keyword = searchInput.value.trim().toLowerCase();
+    
+    // Filter berdasarkan judul
+    const filtered = allLinks.filter(item => 
+      !keyword || (item.title || '').toLowerCase().includes(keyword)
+    );
+
+    const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    const pageItems = filtered.slice(start, start + ITEMS_PER_PAGE);
+
+    linkList.innerHTML = '';
+
+    // Pesan kosong
+    if (allLinks.length === 0) {
+      emptyMsg.textContent = 'Belum ada link tersimpan di cloud.';
+      emptyMsg.classList.add('show');
+    } else if (filtered.length === 0) {
+      emptyMsg.textContent = `Tidak ada link dengan judul mengandung "${searchInput.value.trim()}".`;
+      emptyMsg.classList.add('show');
+    } else {
+      emptyMsg.classList.remove('show');
+    }
+
+    // Info pencarian
+    if (keyword && filtered.length > 0) {
+      searchInfo.innerHTML = `Menampilkan <strong>${filtered.length}</strong> dari <strong>${allLinks.length}</strong> link`;
+      searchInfo.classList.add('show');
+    } else {
+      searchInfo.classList.remove('show');
+    }
+
+    // Render item
+    pageItems.forEach(item => {
+      const li = document.createElement('li');
+      li.className = 'link-item';
+
+      const content = document.createElement('div');
+      content.className = 'link-content';
+
+      const titleEl = document.createElement('span');
+      titleEl.className = 'link-title';
+      titleEl.innerHTML = highlight(item.title || item.url, keyword);
+
+      const a = document.createElement('a');
+      a.className = 'link-url';
+      a.href = item.url;
+      a.textContent = item.url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+
+      content.appendChild(titleEl);
+      content.appendChild(a);
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'delete-btn';
+      delBtn.innerHTML = '🗑️';
+      delBtn.title = 'Hapus link';
+      delBtn.onclick = () => deleteLink(item.id, item.title);
+
+      li.appendChild(content);
+      li.appendChild(delBtn);
+      linkList.appendChild(li);
     });
+
+    renderPagination(totalPages, filtered.length);
+  }
+
+  function renderPagination(totalPages, totalItems) {
+    pagination.innerHTML = '';
+    if (totalItems <= ITEMS_PER_PAGE) {
+      pagination.classList.remove('show');
+      return;
+    }
+    pagination.classList.add('show');
+
+    const prevBtn = document.createElement('button');
+    prevBtn.textContent = '‹';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.onclick = () => { currentPage--; renderLinks(); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+    pagination.appendChild(prevBtn);
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (totalPages > 7 && i > 2 && i < totalPages - 1 && Math.abs(i - currentPage) > 1) {
+        if (i === 3) pagination.appendChild(Object.assign(document.createElement('span'), { className: 'ellipsis', textContent: '…' }));
+        continue;
+      }
+      const btn = document.createElement('button');
+      btn.textContent = i;
+      if (i === currentPage) btn.classList.add('active');
+      btn.onclick = () => { currentPage = i; renderLinks(); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+      pagination.appendChild(btn);
+    }
+
+    const nextBtn = document.createElement('button');
+    nextBtn.textContent = '›';
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.onclick = () => { currentPage++; renderLinks(); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+    pagination.appendChild(nextBtn);
+  }
+
+  function highlight(text, keyword) {
+    if (!keyword) return text;
+    const regex = new RegExp(`(${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    return text.replace(regex, '<span class="highlight">$1</span>');
+  }
+
+  // ============ EVENT LISTENERS ============
+  saveBtn.addEventListener('click', addLink);
+  searchInput.addEventListener('input', () => { currentPage = 1; renderLinks(); });
+  [titleInput, linkInput].forEach(input => {
+    input.addEventListener('keypress', (e) => { if (e.key === 'Enter') addLink(); });
   });
 
-  // Render awal
-  renderLinks();
+  // ============ INISIALISASI ============
+  logDebug('Aplikasi dimulai. Menghubungi Supabase...');
+  // Cek apakah konfigurasi sudah diisi
+  if (SUPABASE_URL.includes('YOUR_') || SUPABASE_ANON_KEY.includes('YOUR_')) {
+    logDebug('PERINGATAN: Konfigurasi Supabase belum diisi! Ganti YOUR_SUPABASE_URL dan YOUR_SUPABASE_ANON_KEY.', 'error');
+    emptyMsg.textContent = 'Konfigurasi Supabase belum diisi. Periksa kode sumber.';
+    emptyMsg.classList.add('show');
+  } else {
+    fetchLinks();
+  }
 </script>
 
 </body>
