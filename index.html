@@ -92,11 +92,17 @@
   .copy-btn:hover { background: #667eea; color: #fff; }
   .del-acc-btn { background: transparent; border: none; color: #e74c3c; font-size: 1.1rem; cursor: pointer; padding: 4px; }
   .del-acc-btn:hover { color: #c0392b; }
+
+  /* GLOBAL ERROR TOAST */
+  #errorToast { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); background: #e74c3c; color: white; padding: 12px 24px; border-radius: 8px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 9999; transition: top 0.3s ease; }
+  #errorToast.show { top: 20px; }
   
   @media (max-width: 480px) { .row { flex-direction: column; } #saveBtn { width: 100%; } .secret-arrow-btn { top: 15px; right: 15px; width: 35px; height: 35px; font-size: 1rem; } }
 </style>
 </head>
 <body>
+
+<div id="errorToast">⚠️ Koneksi terputus atau terjadi kesalahan sistem.</div>
 
 <div class="container">
   <button class="secret-arrow-btn" id="secretArrowBtn" title="Menu Daftar Akun">➔</button>
@@ -131,11 +137,9 @@
   <div class="modal-box">
     <button class="btn-close" id="closeAccountModal">×</button>
     
-    <!-- Header berubah sesuai konteks -->
     <h2 id="modalTitle" style="font-size: 1.4rem; color: #333; margin-bottom: 5px; text-align: center;">🔐 Daftar Akun</h2>
     <p id="modalSubtitle" style="text-align: center; color: #888; font-size: 0.85rem; margin-bottom: 20px;">Semua akun aplikasi Anda terpusat di sini</p>
 
-    <!-- Tombol Kembali (muncul jika difilter) -->
     <button id="backToAllBtn" style="display:none; background: #eef1ff; color: #667eea; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 600; cursor: pointer; margin-bottom: 15px; width: 100%;">⬅ Kembali ke Semua Akun</button>
 
     <button class="add-acc-toggle" id="showAddAccBtn">➕ Tambah Username Baru</button>
@@ -157,12 +161,32 @@
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0d3F1d3dqcnFsdHhycmd3Z3Z2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3MDM0NjEsImV4cCI6MjEwODI3OTQ2MX0.q_hX2wg8nWO8wX7ci9Euy5IQqydBHiUy5s_56yLbL4U';
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+  // ============ GLOBAL ERROR HANDLER (ANTI-FREEZE) ============
+  // Menangkap error JavaScript yang tidak terduga
+  window.addEventListener('error', function(e) {
+    console.error('Global Error:', e);
+    showErrorToast('Terjadi kesalahan sistem: ' + e.message);
+  });
+  
+  // Menangkap promise rejection yang tidak ditangani
+  window.addEventListener('unhandledrejection', function(e) {
+    console.error('Unhandled Promise:', e.reason);
+    showErrorToast('Koneksi lambat atau gagal memuat data.');
+  });
+
+  function showErrorToast(msg) {
+    const toast = document.getElementById('errorToast');
+    toast.textContent = '⚠️ ' + msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 5000);
+  }
+
   // ============ STATE ============
   let allLinks = [];
   let allAccounts = [];
   let isFetchingLinks = false;
   let currentPage = 1;
-  let filteredAppName = null; // Menyimpan nama aplikasi jika difilter
+  let filteredAppName = null;
   const ITEMS_PER_PAGE = 10;
 
   // ============ ELEMEN DOM ============
@@ -225,6 +249,7 @@
     } catch (err) {
       logDebug(`Fetch error: ${err.message}`, 'error');
       emptyMsg.textContent = `Gagal memuat: ${err.message}`;
+      showErrorToast(`Gagal memuat link: ${err.message}`);
     } finally {
       isFetchingLinks = false;
       saveBtn.disabled = false;
@@ -247,7 +272,7 @@
       currentPage = 1;
       await fetchLinks();
     } catch (err) {
-      alert(`Gagal menyimpan: ${err.message}`);
+      showErrorToast(`Gagal menyimpan: ${err.message}`);
     } finally {
       saveBtn.disabled = false; saveBtn.textContent = 'Simpan';
     }
@@ -259,7 +284,7 @@
       const { error } = await withTimeout(supabaseClient.from('links').delete().eq('id', id), 8000, 'Delete Link');
       if (error) throw new Error(error.message);
       await fetchLinks();
-    } catch (err) { alert(`Gagal menghapus: ${err.message}`); }
+    } catch (err) { showErrorToast(`Gagal menghapus: ${err.message}`); }
   }
 
   function renderLinks() {
@@ -278,12 +303,10 @@
     pageItems.forEach(item => {
       const li = document.createElement('li');
       li.className = 'link-item';
-      // Menggunakan event listener langsung agar aman dari karakter aneh
       const titleSpan = document.createElement('span');
       titleSpan.className = 'link-title';
       titleSpan.innerHTML = `${item.title} <span class="view-acc-btn">(Lihat Akun)</span>`;
       
-      // Handler klik untuk lihat akun
       titleSpan.querySelector('.view-acc-btn').addEventListener('click', (e) => {
         e.stopPropagation();
         openAppAccounts(item.title);
@@ -338,6 +361,7 @@
     } catch (err) {
       logDebug(`Fetch Account error: ${err.message}`, 'error');
       accountListContainer.innerHTML = `<p style="text-align:center; color:#e74c3c; font-size:0.9rem;">Gagal memuat: ${err.message}</p>`;
+      showErrorToast(`Gagal memuat akun: ${err.message}`);
     }
   }
 
@@ -348,26 +372,21 @@
       return;
     }
 
-    // Grouping
     let grouped = {};
     allAccounts.forEach(acc => {
-      // Normalisasi nama aplikasi untuk grouping
       const key = acc.app_name.toLowerCase().trim();
       if (!grouped[key]) grouped[key] = { name: acc.app_name, accounts: [] };
       grouped[key].accounts.push(acc);
     });
 
-    // Jika sedang dalam mode filter aplikasi
     if (filteredAppName) {
       const filterKey = filteredAppName.toLowerCase().trim();
-      // Cari aplikasi yang cocok (case-insensitive)
       const matchedKeys = Object.keys(grouped).filter(k => k.includes(filterKey) || filterKey.includes(k));
       
       if (matchedKeys.length === 0) {
         accountListContainer.innerHTML = `<p style="text-align:center; color:#e74c3c; font-size:0.9rem;">Belum ada akun untuk aplikasi "${filteredAppName}".</p>`;
         return;
       }
-      // Tampilkan hanya yang cocok
       const filteredGrouped = {};
       matchedKeys.forEach(k => { filteredGrouped[k] = grouped[k]; });
       grouped = filteredGrouped;
@@ -420,7 +439,7 @@
       await fetchAccounts();
       logDebug('Akun baru disimpan.', 'success');
     } catch (err) {
-      alert(`Gagal menyimpan akun: ${err.message}`);
+      showErrorToast(`Gagal menyimpan akun: ${err.message}`);
     } finally {
       saveAccountBtn.disabled = false; saveAccountBtn.textContent = 'Simpan Akun';
     }
@@ -432,39 +451,35 @@
       const { error } = await withTimeout(supabaseClient.from('accounts').delete().eq('id', id), 8000, 'Delete Account');
       if (error) throw new Error(error.message);
       await fetchAccounts();
-    } catch (err) { alert(`Gagal menghapus: ${err.message}`); }
+    } catch (err) { showErrorToast(`Gagal menghapus: ${err.message}`); }
   }
 
   window.copyText = function(text) {
     navigator.clipboard.writeText(text).then(() => {
       alert('Berhasil disalin: ' + text);
-    }).catch(() => alert('Gagal menyalin teks.'));
+    }).catch(() => showErrorToast('Gagal menyalin teks.'));
   };
 
-  // Membuka modal khusus aplikasi tertentu
   window.openAppAccounts = function(appName) {
     filteredAppName = appName;
     accountModal.classList.add('show');
-    
-    // Ubah UI Modal menjadi mode Filter
     modalTitle.textContent = `🔐 Akun: ${appName}`;
     modalSubtitle.textContent = `Menampilkan username untuk aplikasi ini`;
     backToAllBtn.style.display = 'block';
-    showAddAccBtn.classList.remove('show'); // Sembunyikan tombol tambah global
+    showAddAccBtn.classList.remove('show');
     
-    accAppName.value = appName; // Set form nama aplikasi otomatis
+    accAppName.value = appName;
     addAccountForm.classList.remove('show');
     
     fetchAccounts();
   };
 
-  // Kembali ke tampilan semua akun
   function showAllAccounts() {
     filteredAppName = null;
     modalTitle.textContent = '🔐 Daftar Akun';
     modalSubtitle.textContent = 'Semua akun aplikasi Anda terpusat di sini';
     backToAllBtn.style.display = 'none';
-    showAddAccBtn.classList.add('show'); // Tampilkan tombol tambah global
+    showAddAccBtn.classList.add('show');
     
     addAccountForm.classList.remove('show');
     fetchAccounts();
@@ -476,7 +491,7 @@
   
   secretArrowBtn.addEventListener('click', () => {
     accountModal.classList.add('show');
-    showAllAccounts(); // Default ke tampilan semua
+    showAllAccounts();
   });
   
   closeAccountModal.addEventListener('click', () => accountModal.classList.remove('show'));
