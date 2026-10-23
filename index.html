@@ -42,6 +42,8 @@
   @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
   .link-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
   .link-title { font-weight: 600; color: #333; font-size: 1rem; word-break: break-word; }
+  .link-title .view-acc-btn { color: #667eea; font-size: 0.75rem; cursor: pointer; text-decoration: underline; margin-left: 6px; }
+  .link-title .view-acc-btn:hover { color: #5568d3; }
   .link-url { color: #667eea; text-decoration: none; word-break: break-all; font-size: 0.85rem; transition: color 0.2s; }
   .link-url:hover { color: #5568d3; text-decoration: underline; }
   .delete-btn { background: transparent; border: none; color: #e74c3c; font-size: 1.2rem; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s; }
@@ -80,8 +82,6 @@
   /* DAFTAR AKUN */
   .app-group { background: #fff; border: 1px solid #ddd; border-radius: 10px; margin-bottom: 15px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
   .app-header { background: #f7f8fc; padding: 12px 16px; font-weight: 700; color: #333; font-size: 1rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; }
-  .app-header button { background: #e74c3c; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; }
-  .app-header button:hover { background: #c0392b; }
   
   .acc-item { padding: 12px 16px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
   .acc-item:last-child { border-bottom: none; }
@@ -99,13 +99,11 @@
 <body>
 
 <div class="container">
-  <!-- TOMBOL RAHASIA PANAH -->
   <button class="secret-arrow-btn" id="secretArrowBtn" title="Menu Daftar Akun">➔</button>
 
   <h1>🔗 Link Note</h1>
   <p class="subtitle">Tersimpan di cloud • Akses dari mana saja</p>
 
-  <!-- AREA LINK -->
   <div class="form-group">
     <input type="text" id="titleInput" placeholder="Judul link (contoh: Google)" />
     <div class="row">
@@ -132,10 +130,14 @@
 <div class="modal-overlay" id="accountModal">
   <div class="modal-box">
     <button class="btn-close" id="closeAccountModal">×</button>
-    <h2 style="font-size: 1.4rem; color: #333; margin-bottom: 5px; text-align: center;">🔐 Daftar Akun</h2>
-    <p style="text-align: center; color: #888; font-size: 0.85rem; margin-bottom: 20px;">Semua akun aplikasi Anda terpusat di sini</p>
+    
+    <!-- Header berubah sesuai konteks -->
+    <h2 id="modalTitle" style="font-size: 1.4rem; color: #333; margin-bottom: 5px; text-align: center;">🔐 Daftar Akun</h2>
+    <p id="modalSubtitle" style="text-align: center; color: #888; font-size: 0.85rem; margin-bottom: 20px;">Semua akun aplikasi Anda terpusat di sini</p>
 
-    <!-- FORM TAMBAH AKUN (Disembunyikan, muncul saat klik nama app / tombol) -->
+    <!-- Tombol Kembali (muncul jika difilter) -->
+    <button id="backToAllBtn" style="display:none; background: #eef1ff; color: #667eea; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 600; cursor: pointer; margin-bottom: 15px; width: 100%;">⬅ Kembali ke Semua Akun</button>
+
     <button class="add-acc-toggle" id="showAddAccBtn">➕ Tambah Username Baru</button>
     
     <div class="account-form" id="addAccountForm">
@@ -145,10 +147,7 @@
       <button id="saveAccountBtn">Simpan Akun</button>
     </div>
 
-    <!-- LIST AKUN -->
-    <div id="accountListContainer">
-      <!-- Data akun akan dirender di sini -->
-    </div>
+    <div id="accountListContainer"></div>
   </div>
 </div>
 
@@ -156,7 +155,6 @@
   // ============ KONFIGURASI SUPABASE ============
   const SUPABASE_URL = 'https://ztwquwwjrqltxrrgwgvv.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0d3F1d3dqcnFsdHhycmd3Z3Z2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3MDM0NjEsImV4cCI6MjEwODI3OTQ2MX0.q_hX2wg8nWO8wX7ci9Euy5IQqydBHiUy5s_56yLbL4U';
-  
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // ============ STATE ============
@@ -164,6 +162,7 @@
   let allAccounts = [];
   let isFetchingLinks = false;
   let currentPage = 1;
+  let filteredAppName = null; // Menyimpan nama aplikasi jika difilter
   const ITEMS_PER_PAGE = 10;
 
   // ============ ELEMEN DOM ============
@@ -176,10 +175,12 @@
   const pagination = document.getElementById('pagination');
   const debugPanel = document.getElementById('debugPanel');
   
-  // Akun DOM
   const secretArrowBtn = document.getElementById('secretArrowBtn');
   const accountModal = document.getElementById('accountModal');
   const closeAccountModal = document.getElementById('closeAccountModal');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalSubtitle = document.getElementById('modalSubtitle');
+  const backToAllBtn = document.getElementById('backToAllBtn');
   const showAddAccBtn = document.getElementById('showAddAccBtn');
   const addAccountForm = document.getElementById('addAccountForm');
   const accAppName = document.getElementById('accAppName');
@@ -277,14 +278,35 @@
     pageItems.forEach(item => {
       const li = document.createElement('li');
       li.className = 'link-item';
-      // Menambahkan onclick pada judul untuk membuka akun app terkait
-      li.innerHTML = `
-        <div class="link-content">
-          <span class="link-title" style="cursor:pointer;" onclick="openAppAccounts('${item.title.replace(/'/g, "\\'")}')" title="Klik untuk lihat akun aplikasi ini">${item.title} <small style="color:#667eea; font-size:0.75rem;">(Lihat Akun)</small></span>
-          <a class="link-url" href="${item.url}" target="_blank">${item.url}</a>
-        </div>
-        <button class="delete-btn" onclick="deleteLink(${item.id})">🗑️</button>
-      `;
+      // Menggunakan event listener langsung agar aman dari karakter aneh
+      const titleSpan = document.createElement('span');
+      titleSpan.className = 'link-title';
+      titleSpan.innerHTML = `${item.title} <span class="view-acc-btn">(Lihat Akun)</span>`;
+      
+      // Handler klik untuk lihat akun
+      titleSpan.querySelector('.view-acc-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        openAppAccounts(item.title);
+      });
+
+      const urlLink = document.createElement('a');
+      urlLink.className = 'link-url';
+      urlLink.href = item.url;
+      urlLink.target = '_blank';
+      urlLink.textContent = item.url;
+
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'link-content';
+      contentDiv.appendChild(titleSpan);
+      contentDiv.appendChild(urlLink);
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'delete-btn';
+      delBtn.innerHTML = '🗑️';
+      delBtn.onclick = () => deleteLink(item.id);
+
+      li.appendChild(contentDiv);
+      li.appendChild(delBtn);
       linkList.appendChild(li);
     });
     renderPagination(totalPages, filtered.length);
@@ -326,23 +348,42 @@
       return;
     }
 
-    // Grouping berdasarkan nama aplikasi
-    const grouped = {};
+    // Grouping
+    let grouped = {};
     allAccounts.forEach(acc => {
-      if (!grouped[acc.app_name]) grouped[acc.app_name] = [];
-      grouped[acc.app_name].push(acc);
+      // Normalisasi nama aplikasi untuk grouping
+      const key = acc.app_name.toLowerCase().trim();
+      if (!grouped[key]) grouped[key] = { name: acc.app_name, accounts: [] };
+      grouped[key].accounts.push(acc);
     });
 
-    for (const appName in grouped) {
+    // Jika sedang dalam mode filter aplikasi
+    if (filteredAppName) {
+      const filterKey = filteredAppName.toLowerCase().trim();
+      // Cari aplikasi yang cocok (case-insensitive)
+      const matchedKeys = Object.keys(grouped).filter(k => k.includes(filterKey) || filterKey.includes(k));
+      
+      if (matchedKeys.length === 0) {
+        accountListContainer.innerHTML = `<p style="text-align:center; color:#e74c3c; font-size:0.9rem;">Belum ada akun untuk aplikasi "${filteredAppName}".</p>`;
+        return;
+      }
+      // Tampilkan hanya yang cocok
+      const filteredGrouped = {};
+      matchedKeys.forEach(k => { filteredGrouped[k] = grouped[k]; });
+      grouped = filteredGrouped;
+    }
+
+    for (const key in grouped) {
+      const app = grouped[key];
       const appDiv = document.createElement('div');
       appDiv.className = 'app-group';
       
       const header = document.createElement('div');
       header.className = 'app-header';
-      header.innerHTML = `<span>📱 ${appName}</span>`;
+      header.innerHTML = `<span>📱 ${app.name}</span>`;
       appDiv.appendChild(header);
 
-      grouped[appName].forEach(acc => {
+      app.accounts.forEach(acc => {
         const accItem = document.createElement('div');
         accItem.className = 'acc-item';
         accItem.innerHTML = `
@@ -400,31 +441,49 @@
     }).catch(() => alert('Gagal menyalin teks.'));
   };
 
-  // Membuka modal dan langsung mengisi form dengan nama aplikasi tertentu
+  // Membuka modal khusus aplikasi tertentu
   window.openAppAccounts = function(appName) {
+    filteredAppName = appName;
     accountModal.classList.add('show');
+    
+    // Ubah UI Modal menjadi mode Filter
+    modalTitle.textContent = `🔐 Akun: ${appName}`;
+    modalSubtitle.textContent = `Menampilkan username untuk aplikasi ini`;
+    backToAllBtn.style.display = 'block';
+    showAddAccBtn.classList.remove('show'); // Sembunyikan tombol tambah global
+    
+    accAppName.value = appName; // Set form nama aplikasi otomatis
+    addAccountForm.classList.remove('show');
+    
     fetchAccounts();
-    accAppName.value = appName;
-    addAccountForm.classList.add('show');
-    accUsername.focus();
   };
+
+  // Kembali ke tampilan semua akun
+  function showAllAccounts() {
+    filteredAppName = null;
+    modalTitle.textContent = '🔐 Daftar Akun';
+    modalSubtitle.textContent = 'Semua akun aplikasi Anda terpusat di sini';
+    backToAllBtn.style.display = 'none';
+    showAddAccBtn.classList.add('show'); // Tampilkan tombol tambah global
+    
+    addAccountForm.classList.remove('show');
+    fetchAccounts();
+  }
 
   // ============ EVENT LISTENER ============
   saveBtn.addEventListener('click', addLink);
   searchInput.addEventListener('input', () => { currentPage = 1; renderLinks(); });
   
-  // Buka modal akun lewat tombol panah
   secretArrowBtn.addEventListener('click', () => {
     accountModal.classList.add('show');
-    fetchAccounts();
-    accAppName.value = ''; // Reset form
-    addAccountForm.classList.remove('show');
+    showAllAccounts(); // Default ke tampilan semua
   });
   
   closeAccountModal.addEventListener('click', () => accountModal.classList.remove('show'));
   accountModal.addEventListener('click', (e) => { if (e.target === accountModal) accountModal.classList.remove('show'); });
   
-  // Toggle form tambah username
+  backToAllBtn.addEventListener('click', showAllAccounts);
+  
   showAddAccBtn.addEventListener('click', () => {
     addAccountForm.classList.toggle('show');
     if (addAccountForm.classList.contains('show')) accAppName.focus();
