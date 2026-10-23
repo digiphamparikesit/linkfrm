@@ -24,7 +24,7 @@
   .container {
     background: #fff;
     width: 100%;
-    max-width: 600px;
+    max-width: 640px;
     border-radius: 16px;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
     padding: 30px;
@@ -45,13 +45,21 @@
     margin-bottom: 25px;
   }
 
-  .input-group {
+  .form-group {
     display: flex;
+    flex-direction: column;
     gap: 10px;
-    margin-bottom: 25px;
+    margin-bottom: 20px;
   }
 
-  #linkInput {
+  .row {
+    display: flex;
+    gap: 10px;
+  }
+
+  #titleInput,
+  #linkInput,
+  #searchInput {
     flex: 1;
     padding: 14px 16px;
     border: 2px solid #e0e0e0;
@@ -61,7 +69,9 @@
     transition: border-color 0.3s;
   }
 
-  #linkInput:focus {
+  #titleInput:focus,
+  #linkInput:focus,
+  #searchInput:focus {
     border-color: #667eea;
   }
 
@@ -86,6 +96,27 @@
     transform: scale(0.97);
   }
 
+  .search-box {
+    position: relative;
+    margin-bottom: 20px;
+  }
+
+  .search-box::before {
+    content: '🔍';
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  #searchInput {
+    width: 100%;
+    padding-left: 42px;
+  }
+
   .link-list {
     list-style: none;
     display: flex;
@@ -95,7 +126,7 @@
 
   .link-item {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 12px;
     background: #f7f8fc;
     padding: 14px 16px;
@@ -114,17 +145,37 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
-  .link-item a {
+  .link-content {
     flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .link-title {
+    font-weight: 600;
     color: #333;
+    font-size: 1rem;
+    word-break: break-word;
+  }
+
+  .link-title .highlight {
+    background: #fff59d;
+    border-radius: 3px;
+    padding: 0 2px;
+  }
+
+  .link-url {
+    color: #667eea;
     text-decoration: none;
     word-break: break-all;
-    font-size: 0.95rem;
+    font-size: 0.85rem;
     transition: color 0.2s;
   }
 
-  .link-item a:hover {
-    color: #667eea;
+  .link-url:hover {
+    color: #5568d3;
     text-decoration: underline;
   }
 
@@ -155,6 +206,31 @@
   .empty-msg.show {
     display: block;
   }
+
+  .search-info {
+    text-align: center;
+    color: #888;
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+    display: none;
+  }
+
+  .search-info.show {
+    display: block;
+  }
+
+  .search-info strong {
+    color: #667eea;
+  }
+
+  @media (max-width: 480px) {
+    .row {
+      flex-direction: column;
+    }
+    #saveBtn {
+      width: 100%;
+    }
+  }
 </style>
 </head>
 <body>
@@ -163,43 +239,113 @@
   <h1>🔗 Link Note</h1>
   <p class="subtitle">Simpan tautan penting Anda di sini</p>
 
-  <div class="input-group">
-    <input type="url" id="linkInput" placeholder="Tempel link di sini (https://...)" />
-    <button id="saveBtn">Simpan</button>
+  <div class="form-group">
+    <input type="text" id="titleInput" placeholder="Judul link (contoh: Google)" />
+    <div class="row">
+      <input type="url" id="linkInput" placeholder="Tempel link di sini (https://...)" />
+      <button id="saveBtn">Simpan</button>
+    </div>
   </div>
+
+  <div class="search-box">
+    <input type="text" id="searchInput" placeholder="Cari judul link..." />
+  </div>
+
+  <p class="search-info" id="searchInfo"></p>
 
   <ul class="link-list" id="linkList"></ul>
   <p class="empty-msg" id="emptyMsg">Belum ada link tersimpan.</p>
 </div>
 
 <script>
+  const titleInput = document.getElementById('titleInput');
   const linkInput = document.getElementById('linkInput');
+  const searchInput = document.getElementById('searchInput');
   const saveBtn = document.getElementById('saveBtn');
   const linkList = document.getElementById('linkList');
   const emptyMsg = document.getElementById('emptyMsg');
+  const searchInfo = document.getElementById('searchInfo');
 
-  // Ambil data dari localStorage
+  // Ambil data dari localStorage (mendukung format lama & baru)
   let links = JSON.parse(localStorage.getItem('savedLinks')) || [];
+  links = links.map(item =>
+    typeof item === 'string' ? { title: item, url: item } : item
+  );
 
   // Simpan ke localStorage
   function saveToStorage() {
     localStorage.setItem('savedLinks', JSON.stringify(links));
   }
 
-  // Render daftar link
-  function renderLinks() {
-    linkList.innerHTML = '';
-    emptyMsg.classList.toggle('show', links.length === 0);
+  // Escape HTML agar aman
+  function escapeHTML(str) {
+    return str.replace(/[&<>"']/g, (m) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[m]));
+  }
 
-    links.forEach((link, index) => {
+  // Highlight teks yang cocok dengan kata kunci
+  function highlight(text, keyword) {
+    if (!keyword) return escapeHTML(text);
+    const escapedText = escapeHTML(text);
+    const escapedKeyword = escapeHTML(keyword).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escapedKeyword})`, 'gi');
+    return escapedText.replace(regex, '<span class="highlight">$1</span>');
+  }
+
+  // Render daftar link (dengan filter pencarian)
+  function renderLinks() {
+    const keyword = searchInput.value.trim().toLowerCase();
+    linkList.innerHTML = '';
+
+    // Filter berdasarkan judul saja
+    const filtered = links
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) =>
+        !keyword || (item.title || '').toLowerCase().includes(keyword)
+      );
+
+    // Tampilkan pesan kosong
+    if (links.length === 0) {
+      emptyMsg.textContent = 'Belum ada link tersimpan.';
+      emptyMsg.classList.add('show');
+    } else if (filtered.length === 0) {
+      emptyMsg.textContent = `Tidak ada link dengan judul mengandung "${searchInput.value.trim()}".`;
+      emptyMsg.classList.add('show');
+    } else {
+      emptyMsg.classList.remove('show');
+    }
+
+    // Info hasil pencarian
+    if (keyword && links.length > 0) {
+      searchInfo.innerHTML = `Menampilkan <strong>${filtered.length}</strong> dari <strong>${links.length}</strong> link`;
+      searchInfo.classList.add('show');
+    } else {
+      searchInfo.classList.remove('show');
+    }
+
+    // Render tiap link
+    filtered.forEach(({ item, index }) => {
       const li = document.createElement('li');
       li.className = 'link-item';
 
+      const content = document.createElement('div');
+      content.className = 'link-content';
+
+      const title = document.createElement('span');
+      title.className = 'link-title';
+      const displayTitle = item.title || item.url;
+      title.innerHTML = highlight(displayTitle, keyword);
+
       const a = document.createElement('a');
-      a.href = link;
-      a.textContent = link;
+      a.className = 'link-url';
+      a.href = item.url;
+      a.textContent = item.url;
       a.target = '_blank';
       a.rel = 'noopener noreferrer';
+
+      content.appendChild(title);
+      content.appendChild(a);
 
       const delBtn = document.createElement('button');
       delBtn.className = 'delete-btn';
@@ -207,7 +353,7 @@
       delBtn.title = 'Hapus link';
       delBtn.onclick = () => deleteLink(index);
 
-      li.appendChild(a);
+      li.appendChild(content);
       li.appendChild(delBtn);
       linkList.appendChild(li);
     });
@@ -215,10 +361,12 @@
 
   // Tambah link
   function addLink() {
+    const title = titleInput.value.trim();
     let url = linkInput.value.trim();
 
     if (!url) {
       alert('Silakan masukkan link terlebih dahulu!');
+      linkInput.focus();
       return;
     }
 
@@ -235,11 +383,18 @@
       return;
     }
 
-    links.push(url);
+    links.push({ title: title || url, url });
     saveToStorage();
-    renderLinks();
+
+    titleInput.value = '';
     linkInput.value = '';
-    linkInput.focus();
+    titleInput.focus();
+
+    // Jika sedang mencari, reset pencarian agar link baru terlihat
+    if (searchInput.value.trim()) {
+      searchInput.value = '';
+    }
+    renderLinks();
   }
 
   // Hapus link
@@ -253,8 +408,11 @@
 
   // Event listener
   saveBtn.addEventListener('click', addLink);
-  linkInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') addLink();
+  searchInput.addEventListener('input', renderLinks);
+  [titleInput, linkInput].forEach(input => {
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') addLink();
+    });
   });
 
   // Render awal
