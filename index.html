@@ -223,12 +223,68 @@
     color: #667eea;
   }
 
+  /* PAGINATION */
+  .pagination {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    margin-top: 22px;
+    flex-wrap: wrap;
+  }
+
+  .pagination.show {
+    display: flex;
+  }
+
+  .pagination button {
+    min-width: 38px;
+    height: 38px;
+    padding: 0 10px;
+    border: 2px solid #e0e0e0;
+    background: #fff;
+    color: #555;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .pagination button:hover:not(:disabled):not(.active) {
+    border-color: #667eea;
+    color: #667eea;
+  }
+
+  .pagination button.active {
+    background: #667eea;
+    border-color: #667eea;
+    color: #fff;
+    cursor: default;
+  }
+
+  .pagination button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .pagination .ellipsis {
+    padding: 0 4px;
+    color: #aaa;
+    font-weight: 600;
+  }
+
   @media (max-width: 480px) {
     .row {
       flex-direction: column;
     }
     #saveBtn {
       width: 100%;
+    }
+    .pagination button {
+      min-width: 34px;
+      height: 34px;
+      font-size: 0.85rem;
     }
   }
 </style>
@@ -255,6 +311,8 @@
 
   <ul class="link-list" id="linkList"></ul>
   <p class="empty-msg" id="emptyMsg">Belum ada link tersimpan.</p>
+
+  <div class="pagination" id="pagination"></div>
 </div>
 
 <script>
@@ -265,6 +323,10 @@
   const linkList = document.getElementById('linkList');
   const emptyMsg = document.getElementById('emptyMsg');
   const searchInfo = document.getElementById('searchInfo');
+  const pagination = document.getElementById('pagination');
+
+  const ITEMS_PER_PAGE = 10;
+  let currentPage = 1;
 
   // Ambil data dari localStorage (mendukung format lama & baru)
   let links = JSON.parse(localStorage.getItem('savedLinks')) || [];
@@ -277,14 +339,14 @@
     localStorage.setItem('savedLinks', JSON.stringify(links));
   }
 
-  // Escape HTML agar aman
+  // Escape HTML
   function escapeHTML(str) {
     return str.replace(/[&<>"']/g, (m) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     }[m]));
   }
 
-  // Highlight teks yang cocok dengan kata kunci
+  // Highlight teks cocok
   function highlight(text, keyword) {
     if (!keyword) return escapeHTML(text);
     const escapedText = escapeHTML(text);
@@ -293,19 +355,34 @@
     return escapedText.replace(regex, '<span class="highlight">$1</span>');
   }
 
-  // Render daftar link (dengan filter pencarian)
-  function renderLinks() {
+  // Ambil daftar link terfilter (berdasarkan judul)
+  function getFilteredLinks() {
     const keyword = searchInput.value.trim().toLowerCase();
-    linkList.innerHTML = '';
-
-    // Filter berdasarkan judul saja
-    const filtered = links
+    return links
       .map((item, index) => ({ item, index }))
       .filter(({ item }) =>
         !keyword || (item.title || '').toLowerCase().includes(keyword)
       );
+  }
 
-    // Tampilkan pesan kosong
+  // Render halaman + pagination
+  function renderLinks() {
+    const keyword = searchInput.value.trim().toLowerCase();
+    const filtered = getFilteredLinks();
+
+    const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+
+    // Pastikan currentPage valid
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    const pageItems = filtered.slice(start, start + ITEMS_PER_PAGE);
+
+    // Render list
+    linkList.innerHTML = '';
+
+    // Pesan kosong
     if (links.length === 0) {
       emptyMsg.textContent = 'Belum ada link tersimpan.';
       emptyMsg.classList.add('show');
@@ -317,15 +394,15 @@
     }
 
     // Info hasil pencarian
-    if (keyword && links.length > 0) {
+    if (keyword && links.length > 0 && filtered.length > 0) {
       searchInfo.innerHTML = `Menampilkan <strong>${filtered.length}</strong> dari <strong>${links.length}</strong> link`;
       searchInfo.classList.add('show');
     } else {
       searchInfo.classList.remove('show');
     }
 
-    // Render tiap link
-    filtered.forEach(({ item, index }) => {
+    // Render tiap item di halaman ini
+    pageItems.forEach(({ item, index }) => {
       const li = document.createElement('li');
       li.className = 'link-item';
 
@@ -334,8 +411,7 @@
 
       const title = document.createElement('span');
       title.className = 'link-title';
-      const displayTitle = item.title || item.url;
-      title.innerHTML = highlight(displayTitle, keyword);
+      title.innerHTML = highlight(item.title || item.url, keyword);
 
       const a = document.createElement('a');
       a.className = 'link-url';
@@ -357,6 +433,76 @@
       li.appendChild(delBtn);
       linkList.appendChild(li);
     });
+
+    // Render pagination
+    renderPagination(totalPages, filtered.length);
+  }
+
+  // Render tombol-tombol pagination
+  function renderPagination(totalPages, totalItems) {
+    pagination.innerHTML = '';
+
+    // Sembunyikan jika hanya 1 halaman
+    if (totalItems <= ITEMS_PER_PAGE) {
+      pagination.classList.remove('show');
+      return;
+    }
+    pagination.classList.add('show');
+
+    // Tombol "Prev"
+    const prevBtn = document.createElement('button');
+    prevBtn.textContent = '‹';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.onclick = () => goToPage(currentPage - 1);
+    pagination.appendChild(prevBtn);
+
+    // Nomor halaman dengan ellipsis
+    const pages = getPageNumbers(currentPage, totalPages);
+
+    pages.forEach(p => {
+      if (p === '...') {
+        const span = document.createElement('span');
+        span.className = 'ellipsis';
+        span.textContent = '…';
+        pagination.appendChild(span);
+      } else {
+        const btn = document.createElement('button');
+        btn.textContent = p;
+        if (p === currentPage) btn.classList.add('active');
+        btn.onclick = () => goToPage(p);
+        pagination.appendChild(btn);
+      }
+    });
+
+    // Tombol "Next"
+    const nextBtn = document.createElement('button');
+    nextBtn.textContent = '›';
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.onclick = () => goToPage(currentPage + 1);
+    pagination.appendChild(nextBtn);
+  }
+
+  // Logika nomor halaman (dengan ellipsis untuk halaman banyak)
+  function getPageNumbers(current, total) {
+    if (total <= 7) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+    const pages = [];
+    if (current <= 4) {
+      pages.push(1, 2, 3, 4, 5, '...', total);
+    } else if (current >= total - 3) {
+      pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total);
+    } else {
+      pages.push(1, '...', current - 1, current, current + 1, '...', total);
+    }
+    return pages;
+  }
+
+  // Pindah halaman
+  function goToPage(page) {
+    currentPage = page;
+    renderLinks();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   // Tambah link
@@ -370,12 +516,10 @@
       return;
     }
 
-    // Tambahkan https:// jika belum ada protokol
     if (!/^https?:\/\//i.test(url)) {
       url = 'https://' + url;
     }
 
-    // Validasi URL
     try {
       new URL(url);
     } catch (e) {
@@ -390,10 +534,13 @@
     linkInput.value = '';
     titleInput.focus();
 
-    // Jika sedang mencari, reset pencarian agar link baru terlihat
+    // Reset pencarian agar link baru terlihat
     if (searchInput.value.trim()) {
       searchInput.value = '';
     }
+
+    // Arahkan ke halaman terakhir agar link baru terlihat
+    currentPage = Math.ceil(links.length / ITEMS_PER_PAGE);
     renderLinks();
   }
 
@@ -408,7 +555,10 @@
 
   // Event listener
   saveBtn.addEventListener('click', addLink);
-  searchInput.addEventListener('input', renderLinks);
+  searchInput.addEventListener('input', () => {
+    currentPage = 1; // reset ke halaman 1 saat mencari
+    renderLinks();
+  });
   [titleInput, linkInput].forEach(input => {
     input.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') addLink();
