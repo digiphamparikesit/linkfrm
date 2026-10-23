@@ -69,8 +69,7 @@
   .btn-close:hover { color: #e74c3c; }
   
   /* FORM TAMBAH AKUN DI MODAL */
-  .add-acc-toggle { background: #27ae60; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%; margin-bottom: 15px; display: none; }
-  .add-acc-toggle.show { display: block; }
+  .add-acc-toggle { background: #27ae60; color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%; margin-bottom: 15px; display: block; font-size: 0.95rem; }
   
   .account-form { display: none; flex-direction: column; gap: 10px; margin-bottom: 20px; padding: 15px; background: #f0fdf4; border: 1px solid #27ae60; border-radius: 10px; }
   .account-form.show { display: flex; }
@@ -102,7 +101,7 @@
 </head>
 <body>
 
-<div id="errorToast">⚠️ Koneksi terputus atau terjadi kesalahan sistem.</div>
+<div id="errorToast">⚠️ Terjadi kesalahan sistem.</div>
 
 <div class="container">
   <button class="secret-arrow-btn" id="secretArrowBtn" title="Menu Daftar Akun">➔</button>
@@ -142,6 +141,7 @@
 
     <button id="backToAllBtn" style="display:none; background: #eef1ff; color: #667eea; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 600; cursor: pointer; margin-bottom: 15px; width: 100%;">⬅ Kembali ke Semua Akun</button>
 
+    <!-- TOMBOL TAMBAH SELALU MUNCUL -->
     <button class="add-acc-toggle" id="showAddAccBtn">➕ Tambah Username Baru</button>
     
     <div class="account-form" id="addAccountForm">
@@ -162,13 +162,11 @@
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // ============ GLOBAL ERROR HANDLER (ANTI-FREEZE) ============
-  // Menangkap error JavaScript yang tidak terduga
   window.addEventListener('error', function(e) {
     console.error('Global Error:', e);
-    showErrorToast('Terjadi kesalahan sistem: ' + e.message);
+    showErrorToast('Terjadi kesalahan: ' + e.message);
   });
   
-  // Menangkap promise rejection yang tidak ditangani
   window.addEventListener('unhandledrejection', function(e) {
     console.error('Unhandled Promise:', e.reason);
     showErrorToast('Koneksi lambat atau gagal memuat data.');
@@ -466,10 +464,12 @@
     modalTitle.textContent = `🔐 Akun: ${appName}`;
     modalSubtitle.textContent = `Menampilkan username untuk aplikasi ini`;
     backToAllBtn.style.display = 'block';
-    showAddAccBtn.classList.remove('show');
     
-    accAppName.value = appName;
-    addAccountForm.classList.remove('show');
+    // Pastikan tombol tambah SELALU terlihat
+    showAddAccBtn.style.display = 'block';
+    
+    accAppName.value = appName; // Otomatis isi nama aplikasi
+    addAccountForm.classList.remove('show'); // Sembunyikan form dulu
     
     fetchAccounts();
   };
@@ -479,8 +479,11 @@
     modalTitle.textContent = '🔐 Daftar Akun';
     modalSubtitle.textContent = 'Semua akun aplikasi Anda terpusat di sini';
     backToAllBtn.style.display = 'none';
-    showAddAccBtn.classList.add('show');
     
+    // Pastikan tombol tambah SELALU terlihat
+    showAddAccBtn.style.display = 'block';
+    
+    accAppName.value = '';
     addAccountForm.classList.remove('show');
     fetchAccounts();
   }
