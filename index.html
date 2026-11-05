@@ -13,11 +13,11 @@
   h1 { text-align: center; color: #333; margin-bottom: 8px; font-size: 1.8rem; }
   .subtitle { text-align: center; color: #888; font-size: 0.9rem; margin-bottom: 25px; }
   
-  /* INDIKATOR STATUS KONEKSI (BARU) */
+  /* INDIKATOR STATUS KONEKSI */
   .status-badge {
     position: absolute; top: 20px; left: 20px;
     padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold;
-    display: flex; align-items: center; gap: 6px; transition: all 0.3s;
+    display: flex; align-items: center; gap: 6px; transition: all 0.3s; z-index: 10;
   }
   .status-badge.online { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
   .status-badge.offline { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; animation: pulse 1.5s infinite; }
@@ -68,6 +68,8 @@
   .pagination button { min-width: 38px; height: 38px; padding: 0 10px; border: 2px solid #e0e0e0; background: #fff; color: #555; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
   .pagination button:hover:not(:disabled):not(.active) { border-color: #667eea; color: #667eea; }
   .pagination button.active { background: #667eea; border-color: #667eea; color: #fff; cursor: default; }
+  
+  /* DEBUG PANEL (Hanya muncul jika ?debug=1) */
   #debugPanel { margin-top: 25px; padding: 12px; background: #1e1e1e; color: #0f0; border-radius: 8px; font-family: monospace; font-size: 0.75rem; max-height: 150px; overflow-y: auto; display: none; }
   #debugPanel.show { display: block; }
 
@@ -115,7 +117,6 @@
 <div id="errorToast">⚠️ Terjadi kesalahan sistem.</div>
 
 <div class="container">
-  <!-- INDIKATOR STATUS REAL-TIME -->
   <div class="status-badge online" id="statusBadge">
     <div class="status-dot"></div>
     <span id="statusText">Online</span>
@@ -173,11 +174,13 @@
 
 <script>
   // ============ KONFIGURASI SUPABASE ============
+  // Pastikan kunci ini sudah yang terbaru dan benar!
   const SUPABASE_URL = 'https://ztwquwwjrqltxrrgwgvv.supabase.co';
-  const SUPABASE_ANON_KEY = 'sb_publishable_ddB2P1QFGIIwVA1Z-s48WQ_Iog9RPD4';
+  const SUPABASE_ANON_KEY = 'sb_publishable_fXjaAI4FYxC5etIhEGF5LA_CLV7u0NN'; 
+  
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  // ============ STATE & VARIABEL ANTI-FREEZE ============
+  // ============ STATE & VARIABEL ============
   let allLinks = [];
   let allAccounts = [];
   let isFetchingLinks = false;
@@ -185,8 +188,9 @@
   let filteredAppName = null;
   const ITEMS_PER_PAGE = 10;
   
-  let isSupabaseOnline = true; // Status koneksi
+  let isSupabaseOnline = true; 
   let healthCheckInterval = null;
+  let offlineQueue = JSON.parse(localStorage.getItem('offlineLinks')) || [];
 
   // ============ GLOBAL ERROR HANDLER ============
   window.addEventListener('error', function(e) {
@@ -196,16 +200,17 @@
     showErrorToast('Koneksi lambat atau gagal memuat data.');
   });
 
-  function showErrorToast(msg) {
+  function showErrorToast(msg, color = '#e74c3c') {
     const toast = document.getElementById('errorToast');
+    toast.style.background = color;
     toast.textContent = '⚠️ ' + msg;
     toast.classList.add('show');
     setTimeout(() => toast.classList.remove('show'), 5000);
   }
 
-  // ============ UPDATE STATUS UI ============
+  // ============ UPDATE STATUS UI & SINKRONISASI OFFLINE ============
   function updateConnectionStatus(online) {
-    if (isSupabaseOnline === online) return; // Cegah render berulang
+    if (isSupabaseOnline === online) return; 
     isSupabaseOnline = online;
     
     const badge = document.getElementById('statusBadge');
@@ -215,36 +220,63 @@
       badge.className = 'status-badge online';
       text.textContent = 'Online';
       logDebug('Koneksi ke Supabase pulih.', 'success');
-      // Tarik data terbaru jika koneksi pulih
-      fetchLinks(); 
+      
+      if (offlineQueue.length > 0) {
+        logDebug(`Memproses ${offlineQueue.length} data offline...`, 'info');
+        syncOfflineQueue();
+      } else {
+        fetchLinks(); 
+      }
     } else {
       badge.className = 'status-badge offline';
       text.textContent = 'Offline';
       logDebug('Koneksi ke Supabase terputus.', 'error');
-      showErrorToast('Koneksi database terputus. Aplikasi berjalan di mode offline.');
+      showErrorToast('Koneksi database terputus. Aplikasi berjalan di mode offline.', '#f39c12');
     }
   }
 
-  // ============ FUNGSI HEARTBEAT (CEK KONEKSI BERKALA) ============
+  async function syncOfflineQueue() {
+    let successCount = 0;
+    for (let i = 0; i < offlineQueue.length; i++) {
+      const item = offlineQueue[i];
+      try {
+        const { error } = await supabaseClient.from('links').insert([{ title: item.title, url: item.url }]);
+        if (!error) successCount++;
+      } catch (e) {}
+    }
+    
+    if (successCount > 0) {
+      showErrorToast(`Berhasil menyinkronkan ${successCount} link offline ke server.`, '#27ae60');
+      offlineQueue = []; 
+      localStorage.setItem('offlineLinks', JSON.stringify(offlineQueue));
+    }
+    fetchLinks(); 
+  }
+
+  // ============ FUNGSI HEARTBEAT (DIPERBARUI) ============
   async function checkSupabaseConnection() {
-    // Jika sedang offline, jangan melakukan request berat, cukup tes ringan
     try {
-      const { error } = await supabaseClient.from('links').select('id', { count: 'exact', head: true }).limit(1).maybeSingle();
-      // Jika error karena jaringan, lempar error. Jika error karena data kosong, abaikan.
-      if (error && error.message.includes('fetch')) throw new Error('Network error');
+      // Cek koneksi ringan
+      const { error } = await supabaseClient.from('links').select('id', { count: 'exact', head: true }).limit(1);
+      
+      // Jika error yang muncul adalah karena jaringan (fetch failed), baru set offline
+      if (error && (error.message.includes('fetch') || error.message.includes('network'))) {
+        throw new Error('Network error');
+      }
+      
+      // Jika tidak ada error jaringan (misal tabel kosong), anggap online
       updateConnectionStatus(true);
     } catch (err) {
       updateConnectionStatus(false);
     }
   }
 
-  // Mulai pengecekan setiap 15 detik
   healthCheckInterval = setInterval(checkSupabaseConnection, 15000);
 
   // ============ FUNGSI ANTI-FREEZE (TIMEOUT) ============
   function withTimeout(promise, ms = 8000, label = 'Request') {
     const timeout = new Promise((_, reject) => setTimeout(() => {
-      updateConnectionStatus(false); // Set status offline jika timeout
+      updateConnectionStatus(false); 
       reject(new Error(`${label} timeout (${ms}ms). Server tidak merespons.`));
     }, ms));
     return Promise.race([promise, timeout]);
@@ -262,7 +294,11 @@
     debugPanel.scrollTop = debugPanel.scrollHeight;
     console.log(`[DEBUG] ${msg}`);
   }
-  if (window.location.search.includes('debug=1')) document.getElementById('debugPanel').classList.add('show');
+  
+  // Tampilkan panel debug HANYA jika ada ?debug=1 di URL
+  if (window.location.search.includes('debug=1')) {
+    document.getElementById('debugPanel').classList.add('show');
+  }
 
   // ============ ELEMEN DOM ============
   const titleInput = document.getElementById('titleInput');
@@ -301,6 +337,15 @@
       );
       if (error) throw new Error(error.message);
       allLinks = data || [];
+      
+      const offlineMapped = offlineQueue.map(item => ({
+        id: 'offline-' + Math.random(), 
+        title: item.title,
+        url: item.url,
+        isOffline: true
+      }));
+      allLinks = [...offlineMapped, ...allLinks];
+      
       renderLinks();
     } catch (err) {
       logDebug(`Fetch error: ${err.message}`, 'error');
@@ -313,12 +358,29 @@
   }
 
   async function addLink() {
-    if (!isSupabaseOnline) { showErrorToast('Tidak dapat menyimpan. Mode offline.'); return; }
-    
     const title = titleInput.value.trim();
     let url = linkInput.value.trim();
     if (!url) { alert('Masukkan link dulu!'); return; }
     if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+
+    if (!isSupabaseOnline) {
+      offlineQueue.push({ title: title || url, url: url });
+      localStorage.setItem('offlineLinks', JSON.stringify(offlineQueue));
+      titleInput.value = ''; linkInput.value = '';
+      currentPage = 1;
+      
+      showErrorToast('Disimpan secara offline. Akan disinkronkan saat online.', '#f39c12');
+      
+      const offlineMapped = offlineQueue.map(item => ({
+        id: 'offline-' + Math.random(),
+        title: item.title,
+        url: item.url,
+        isOffline: true
+      }));
+      allLinks = [...offlineMapped, ...allLinks.filter(l => !l.isOffline)];
+      renderLinks();
+      return;
+    }
 
     saveBtn.disabled = true; saveBtn.textContent = 'Menyimpan...';
     try {
@@ -337,8 +399,17 @@
   }
 
   async function deleteLink(id) {
-    if (!isSupabaseOnline) { showErrorToast('Tidak dapat menghapus. Mode offline.'); return; }
     if (!confirm('Hapus link ini?')) return;
+    
+    if (typeof id === 'string' && id.startsWith('offline-')) {
+      offlineQueue = offlineQueue.filter((item, index) => 'offline-' + index !== id);
+      localStorage.setItem('offlineLinks', JSON.stringify(offlineQueue));
+      fetchLinks();
+      return;
+    }
+
+    if (!isSupabaseOnline) { showErrorToast('Tidak dapat menghapus link server saat offline.', '#f39c12'); return; }
+    
     try {
       const { error } = await withTimeout(supabaseClient.from('links').delete().eq('id', id), 8000, 'Delete Link');
       if (error) throw new Error(error.message);
@@ -364,9 +435,14 @@
     pageItems.forEach(item => {
       const li = document.createElement('li');
       li.className = 'link-item';
+      if (item.isOffline) {
+        li.style.borderLeftColor = '#f39c12';
+        li.style.background = '#fff8e1';
+      }
+
       const titleSpan = document.createElement('span');
       titleSpan.className = 'link-title';
-      titleSpan.innerHTML = `${item.title} <span class="view-acc-btn">(Lihat Akun)</span>`;
+      titleSpan.innerHTML = `${item.title} ${item.isOffline ? '<small style="color:#f39c12; font-size:0.7rem;">(Menunggu Sinkron)</small>' : ''} <span class="view-acc-btn">(Lihat Akun)</span>`;
       
       titleSpan.querySelector('.view-acc-btn').addEventListener('click', (e) => {
         e.stopPropagation();
@@ -485,7 +561,7 @@
   }
 
   async function saveNewAccount() {
-    if (!isSupabaseOnline) { showErrorToast('Tidak dapat menyimpan. Mode offline.'); return; }
+    if (!isSupabaseOnline) { showErrorToast('Tidak dapat menyimpan. Mode offline.', '#f39c12'); return; }
     
     const appName = accAppName.value.trim();
     const username = accUsername.value.trim();
@@ -513,7 +589,7 @@
   }
 
   async function deleteAccount(id) {
-    if (!isSupabaseOnline) { showErrorToast('Tidak dapat menghapus. Mode offline.'); return; }
+    if (!isSupabaseOnline) { showErrorToast('Tidak dapat menghapus. Mode offline.', '#f39c12'); return; }
     if (!confirm('Hapus akun ini?')) return;
     try {
       const { error } = await withTimeout(supabaseClient.from('accounts').delete().eq('id', id), 8000, 'Delete Account');
