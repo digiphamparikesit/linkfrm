@@ -7,38 +7,52 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
-  body { min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; display: flex; justify-content: center; align-items: flex-start; }
+  body { min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; display: flex; flex-direction: column; align-items: center; }
   
-  .container { background: #fff; width: 100%; max-width: 640px; border-radius: 16px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2); padding: 30px; margin-top: 20px; position: relative; }
-  h1 { text-align: center; color: #333; margin-bottom: 8px; font-size: 1.8rem; }
-  .subtitle { text-align: center; color: #888; font-size: 0.9rem; margin-bottom: 25px; }
+  /* CSS UNTUK HEADER YANG MENEMPEL (STICKY) */
+  .sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    width: 100%;
+    max-width: 640px;
+    padding: 15px 0 25px 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    text-align: center;
+    /* Efek bayangan tipis di bawah header saat di-scroll */
+    box-shadow: 0 10px 15px -10px rgba(0,0,0,0.3);
+  }
+  h1 { color: #fff; margin-bottom: 5px; font-size: 1.8rem; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+  .subtitle { color: rgba(255,255,255,0.8); font-size: 0.9rem; }
   
-  /* INDIKATOR STATUS KONEKSI (Bisa diklik) */
+  /* KOTAK KONTEN UTAMA */
+  .container { background: #fff; width: 100%; max-width: 640px; border-radius: 16px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2); padding: 30px; position: relative; margin-bottom: 40px; }
+  
+  /* INDIKATOR STATUS KONEKSI & TOMBOL PANAH */
   .status-badge {
-    position: absolute; top: 20px; left: 20px;
+    position: absolute; top: -20px; left: 20px;
     padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold;
     display: flex; align-items: center; gap: 6px; transition: all 0.3s; z-index: 10;
-    cursor: pointer; user-select: none;
+    cursor: pointer; user-select: none; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
   }
   .status-badge:hover { opacity: 0.8; transform: scale(1.05); }
-  .status-badge.online { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
-  .status-badge.offline { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
-  .status-badge.checking { background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; }
+  .status-badge.online { color: #2e7d32; }
+  .status-badge.offline { color: #c62828; }
+  .status-badge.checking { color: #e65100; }
   .status-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
 
-  /* TOMBOL PANAH RAHASIA */
   .secret-arrow-btn {
-    position: absolute; top: 20px; right: 20px;
-    background: #eef1ff; border: 2px solid #667eea; color: #667eea;
+    position: absolute; top: -20px; right: 20px;
+    background: #fff; border: 2px solid #667eea; color: #667eea;
     width: 40px; height: 40px; border-radius: 50%;
     font-size: 1.2rem; font-weight: bold; cursor: pointer;
     display: flex; justify-content: center; align-items: center;
-    transition: all 0.3s; z-index: 10;
+    transition: all 0.3s; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
   }
   .secret-arrow-btn:hover { background: #667eea; color: #fff; transform: scale(1.1); }
 
   /* FORM LINK */
-  .form-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; margin-top: 20px; }
+  .form-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; margin-top: 10px; }
   .row { display: flex; gap: 10px; }
   #titleInput, #linkInput, #searchInput { flex: 1; padding: 14px 16px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 1rem; outline: none; transition: border-color 0.3s; }
   #titleInput:focus, #linkInput:focus, #searchInput:focus { border-color: #667eea; }
@@ -106,24 +120,32 @@
   #errorToast { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); background: #e74c3c; color: white; padding: 12px 24px; border-radius: 8px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 9999; transition: top 0.3s ease; text-align: center; }
   #errorToast.show { top: 20px; }
   
-  @media (max-width: 480px) { .row { flex-direction: column; } #saveBtn { width: 100%; } .secret-arrow-btn { top: 15px; right: 15px; width: 35px; height: 35px; font-size: 1rem; } .status-badge { top: 15px; left: 15px; } }
+  @media (max-width: 480px) { 
+    .row { flex-direction: column; } 
+    #saveBtn { width: 100%; } 
+    .secret-arrow-btn { top: -15px; right: 15px; width: 35px; height: 35px; font-size: 1rem; } 
+    .status-badge { top: -15px; left: 15px; } 
+  }
 </style>
 </head>
 <body>
 
 <div id="errorToast">⚠️ Terjadi kesalahan sistem.</div>
 
+<!-- HEADER YANG MENEMPEL SAAT SCROLL -->
+<div class="sticky-header">
+  <h1>🔗 Link Note</h1>
+  <p class="subtitle">Tersimpan di cloud • Akses dari mana saja</p>
+</div>
+
 <div class="container">
-  <!-- INDIKATOR STATUS (Bisa diklik untuk cek manual) -->
+  <!-- Tombol mengambang di atas border container -->
   <div class="status-badge online" id="statusBadge" title="Klik untuk cek koneksi manual">
     <div class="status-dot"></div>
     <span id="statusText">Online</span>
   </div>
 
   <button class="secret-arrow-btn" id="secretArrowBtn" title="Menu Daftar Akun">➔</button>
-
-  <h1>🔗 Link Note</h1>
-  <p class="subtitle">Tersimpan di cloud • Akses dari mana saja</p>
 
   <div class="form-group">
     <input type="text" id="titleInput" placeholder="Judul link (contoh: Google)" />
@@ -173,7 +195,7 @@
 <script>
   // ============ KONFIGURASI SUPABASE ============
   const SUPABASE_URL = 'https://ztwquwwjrqltxrrgwgvv.supabase.co';
-  const SUPABASE_ANON_KEY = 'sb_publishable_ddB2P1QFGIIwVA1Z-s48WQ_Iog9RPD4'; 
+  const SUPABASE_ANON_KEY = 'sb_publishable_fXjaAI4FYxC5etIhEGF5LA_CLV7u0NN'; 
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // ============ STATE ============
@@ -188,12 +210,8 @@
   let offlineQueue = JSON.parse(localStorage.getItem('offlineLinks')) || [];
 
   // ============ GLOBAL ERROR HANDLER ============
-  window.addEventListener('error', function(e) {
-    showErrorToast('Terjadi kesalahan: ' + e.message);
-  });
-  window.addEventListener('unhandledrejection', function(e) {
-    showErrorToast('Koneksi lambat atau gagal memuat data.');
-  });
+  window.addEventListener('error', function(e) { showErrorToast('Error: ' + e.message); });
+  window.addEventListener('unhandledrejection', function(e) { showErrorToast('Koneksi lambat/gagal.'); });
 
   function showErrorToast(msg, color = '#e74c3c') {
     const toast = document.getElementById('errorToast');
@@ -214,10 +232,8 @@
     if (online) {
       badge.className = 'status-badge online';
       text.textContent = 'Online';
-      logDebug('Koneksi ke Supabase pulih.', 'success');
-      
+      logDebug('Koneksi pulih.', 'success');
       if (offlineQueue.length > 0) {
-        logDebug(`Memproses ${offlineQueue.length} data offline...`, 'info');
         syncOfflineQueue();
       } else {
         fetchLinks(); 
@@ -225,7 +241,7 @@
     } else {
       badge.className = 'status-badge offline';
       text.textContent = 'Offline';
-      logDebug('Koneksi ke Supabase terputus.', 'error');
+      logDebug('Koneksi terputus.', 'error');
       if (showToast) showErrorToast('Koneksi database terputus. Mode offline aktif.', '#f39c12');
     }
   }
@@ -239,9 +255,8 @@
         if (!error) successCount++;
       } catch (e) {}
     }
-    
     if (successCount > 0) {
-      showErrorToast(`Berhasil menyinkronkan ${successCount} link offline ke server.`, '#27ae60');
+      showErrorToast(`Sinkronisasi ${successCount} link offline berhasil.`, '#27ae60');
       offlineQueue = []; 
       localStorage.setItem('offlineLinks', JSON.stringify(offlineQueue));
     }
@@ -270,20 +285,18 @@
     }
   }
 
-  // Penjadwalan Cek Otomatis Tiap Jam 12 Malam
   function scheduleMidnightCheck() {
     const now = new Date();
     const midnight = new Date();
-    midnight.setHours(24, 0, 0, 0); // Set ke jam 00:00 besok
+    midnight.setHours(24, 0, 0, 0); 
     const timeUntilMidnight = midnight.getTime() - now.getTime();
-    
     setTimeout(() => {
-      checkSupabaseConnection(false); // Cek otomatis
-      scheduleMidnightCheck(); // Jadwalkan lagi untuk besok
+      checkSupabaseConnection(false); 
+      scheduleMidnightCheck(); 
     }, timeUntilMidnight);
   }
 
-  // ============ TIMEOUT ANTI-FREEZE ============
+  // ============ TIMEOUT & DEBUG ============
   function withTimeout(promise, ms = 8000, label = 'Request') {
     const timeout = new Promise((_, reject) => setTimeout(() => {
       updateConnectionStatus(false); 
@@ -292,11 +305,9 @@
     return Promise.race([promise, timeout]);
   }
 
-  // ============ DEBUG UTILITY ============
   function logDebug(msg, type = 'info') {
     const time = new Date().toLocaleTimeString();
     const entry = document.createElement('div');
-    entry.className = 'log-entry';
     let colorClass = type === 'error' ? 'color:#ff5555;' : (type === 'success' ? 'color:#55ff55;' : '');
     entry.innerHTML = `<span style="color:#888; margin-right:8px;">[${time}]</span><span style="${colorClass}">${msg}</span>`;
     document.getElementById('debugPanel').appendChild(entry);
@@ -342,12 +353,10 @@
       );
       if (error) throw new Error(error.message);
       allLinks = data || [];
-      
       const offlineMapped = offlineQueue.map(item => ({
         id: 'offline-' + Math.random(), title: item.title, url: item.url, isOffline: true
       }));
       allLinks = [...offlineMapped, ...allLinks];
-      
       renderLinks();
     } catch (err) {
       emptyMsg.textContent = `Gagal memuat: ${err.message}`;
@@ -368,8 +377,7 @@
       localStorage.setItem('offlineLinks', JSON.stringify(offlineQueue));
       titleInput.value = ''; linkInput.value = '';
       currentPage = 1;
-      showErrorToast('Disimpan secara offline (Menunggu Sinkron).', '#f39c12');
-      
+      showErrorToast('Disimpan secara offline.', '#f39c12');
       const offlineMapped = offlineQueue.map(item => ({
         id: 'offline-' + Math.random(), title: item.title, url: item.url, isOffline: true
       }));
@@ -396,16 +404,13 @@
 
   async function deleteLink(id) {
     if (!confirm('Hapus link ini?')) return;
-    
     if (typeof id === 'string' && id.startsWith('offline-')) {
       offlineQueue = offlineQueue.filter((item, index) => 'offline-' + index !== id);
       localStorage.setItem('offlineLinks', JSON.stringify(offlineQueue));
       fetchLinks();
       return;
     }
-
     if (!isSupabaseOnline) { showErrorToast('Tidak dapat menghapus saat offline.', '#f39c12'); return; }
-    
     try {
       const { error } = await withTimeout(supabaseClient.from('links').delete().eq('id', id), 8000, 'Delete Link');
       if (error) throw new Error(error.message);
@@ -433,7 +438,6 @@
         li.style.borderLeftColor = '#f39c12';
         li.style.background = '#fff8e1';
       }
-
       const titleSpan = document.createElement('span');
       titleSpan.className = 'link-title';
       titleSpan.innerHTML = `${item.title} ${item.isOffline ? '<small style="color:#f39c12; font-size:0.7rem;">(Menunggu Sinkron)</small>' : ''} <span class="view-acc-btn">(Lihat Akun)</span>`;
@@ -504,7 +508,6 @@
       accountListContainer.innerHTML = '<p style="text-align:center; color:#aaa; font-size:0.9rem; font-style:italic;">Belum ada akun tersimpan.</p>';
       return;
     }
-
     let grouped = {};
     allAccounts.forEach(acc => {
       const key = acc.app_name.toLowerCase().trim();
@@ -515,7 +518,6 @@
     if (filteredAppName) {
       const filterKey = filteredAppName.toLowerCase().trim();
       const matchedKeys = Object.keys(grouped).filter(k => k.includes(filterKey) || filterKey.includes(k));
-      
       if (matchedKeys.length === 0) {
         accountListContainer.innerHTML = `<p style="text-align:center; color:#e74c3c; font-size:0.9rem;">Belum ada akun untuk "${filteredAppName}".</p>`;
         return;
@@ -529,7 +531,6 @@
       const app = grouped[key];
       const appDiv = document.createElement('div');
       appDiv.className = 'app-group';
-      
       const header = document.createElement('div');
       header.className = 'app-header';
       header.innerHTML = `<span>📱 ${app.name}</span>`;
@@ -547,18 +548,15 @@
         `;
         appDiv.appendChild(accItem);
       });
-
       accountListContainer.appendChild(appDiv);
     }
   }
 
   async function saveNewAccount() {
     if (!isSupabaseOnline) { showErrorToast('Tidak dapat menyimpan. Mode offline.', '#f39c12'); return; }
-    
     const appName = accAppName.value.trim();
     const username = accUsername.value.trim();
     const password = accPassword.value.trim();
-    
     if (!appName || !username || !password) { alert('Semua kolom harus diisi!'); return; }
     
     saveAccountBtn.disabled = true; saveAccountBtn.textContent = 'Menyimpan...';
@@ -571,7 +569,7 @@
       addAccountForm.classList.remove('show');
       await fetchAccounts();
     } catch (err) {
-      if (!err.message.includes('timeout')) showErrorToast(`Gagal menyimpan akun: ${err.message}`);
+      if (!err.message.includes('timeout')) showErrorToast(`Gagal: ${err.message}`);
     } finally {
       saveAccountBtn.disabled = false; saveAccountBtn.textContent = 'Simpan Akun';
     }
@@ -620,7 +618,6 @@
   saveBtn.addEventListener('click', addLink);
   searchInput.addEventListener('input', () => { currentPage = 1; renderLinks(); });
   
-  // Klik status untuk cek manual
   statusBadge.addEventListener('click', () => {
     checkSupabaseConnection(true);
   });
@@ -642,14 +639,11 @@
   saveAccountBtn.addEventListener('click', saveNewAccount);
 
   // ============ INISIALISASI ============
-  logDebug('Aplikasi dimulai. Menguji koneksi awal...');
-  
-  // Cek pertama kali dibuka (jika gagal, akan memunculkan notif offline)
+  logDebug('Aplikasi dimulai. Menguji koneksi...');
   checkSupabaseConnection(false).then(() => {
     if (isSupabaseOnline) fetchLinks();
   });
   
-  // Mulai jadwal cek tiap jam 12 malam
   scheduleMidnightCheck();
 </script>
 
