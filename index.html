@@ -7,62 +7,121 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
-  body { min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; display: flex; flex-direction: column; align-items: center; }
   
-  /* CSS UNTUK HEADER YANG MENEMPEL (STICKY) */
+  /* Latar belakang gradasi full screen */
+  body { 
+    min-height: 100vh; 
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-attachment: fixed;
+    padding: 20px; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+  }
+  
+  /* HEADER STICKY (Menempel di atas) */
   .sticky-header {
     position: sticky;
     top: 0;
     z-index: 100;
     width: 100%;
     max-width: 640px;
-    padding: 15px 0 25px 0;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px 0 25px 0;
     text-align: center;
-    /* Efek bayangan tipis di bawah header saat di-scroll */
-    box-shadow: 0 10px 15px -10px rgba(0,0,0,0.3);
+    background: transparent;
   }
+  
   h1 { color: #fff; margin-bottom: 5px; font-size: 1.8rem; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
   .subtitle { color: rgba(255,255,255,0.8); font-size: 0.9rem; }
   
   /* KOTAK KONTEN UTAMA */
-  .container { background: #fff; width: 100%; max-width: 640px; border-radius: 16px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2); padding: 30px; position: relative; margin-bottom: 40px; }
+  .container { 
+    background: #fff; 
+    width: 100%; 
+    max-width: 640px; 
+    border-radius: 16px; 
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2); 
+    padding: 20px 30px 30px 30px; 
+    position: relative; 
+    margin-bottom: 40px; 
+  }
   
-  /* INDIKATOR STATUS KONEKSI & TOMBOL PANAH */
+  /* BARIS STATUS & TOMBOL PANAH */
+  .top-action-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
   .status-badge {
-    position: absolute; top: -20px; left: 20px;
     padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold;
-    display: flex; align-items: center; gap: 6px; transition: all 0.3s; z-index: 10;
-    cursor: pointer; user-select: none; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    display: flex; align-items: center; gap: 6px; transition: all 0.3s;
+    cursor: pointer; user-select: none; background: #f0f2f5;
   }
   .status-badge:hover { opacity: 0.8; transform: scale(1.05); }
-  .status-badge.online { color: #2e7d32; }
-  .status-badge.offline { color: #c62828; }
-  .status-badge.checking { color: #e65100; }
+  .status-badge.online { color: #2e7d32; background: #e8f5e9; }
+  .status-badge.offline { color: #c62828; background: #ffebee; }
+  .status-badge.checking { color: #e65100; background: #fff3e0; }
   .status-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
 
   .secret-arrow-btn {
-    position: absolute; top: -20px; right: 20px;
-    background: #fff; border: 2px solid #667eea; color: #667eea;
-    width: 40px; height: 40px; border-radius: 50%;
-    font-size: 1.2rem; font-weight: bold; cursor: pointer;
+    background: #eef1ff; border: 2px solid #667eea; color: #667eea;
+    width: 36px; height: 36px; border-radius: 50%;
+    font-size: 1.1rem; font-weight: bold; cursor: pointer;
     display: flex; justify-content: center; align-items: center;
-    transition: all 0.3s; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: all 0.3s;
   }
   .secret-arrow-btn:hover { background: #667eea; color: #fff; transform: scale(1.1); }
 
-  /* FORM LINK */
-  .form-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; margin-top: 10px; }
+  /* TOMBOL TAMBAH (+) DAN FORM YANG TERSEMBUNYI */
+  .add-link-toggle {
+    width: 100%;
+    padding: 15px;
+    background: #f7f8fc;
+    border: 2px dashed #667eea;
+    border-radius: 10px;
+    color: #667eea;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 20px;
+    transition: all 0.2s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+  }
+  .add-link-toggle:hover { background: #eef1ff; }
+
+  .form-group { 
+    display: none; /* Tersembunyi secara default */
+    flex-direction: column; 
+    gap: 10px; 
+    margin-bottom: 20px; 
+    padding: 20px;
+    background: #f7f8fc;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    animation: slideDown 0.3s ease;
+  }
+  .form-group.show { display: flex; }
+  @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
   .row { display: flex; gap: 10px; }
-  #titleInput, #linkInput, #searchInput { flex: 1; padding: 14px 16px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 1rem; outline: none; transition: border-color 0.3s; }
+  #titleInput, #linkInput, #searchInput { flex: 1; padding: 14px 16px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 1rem; outline: none; transition: border-color 0.3s; background: #fff; }
   #titleInput:focus, #linkInput:focus, #searchInput:focus { border-color: #667eea; }
-  #saveBtn { padding: 14px 24px; background: #667eea; color: #fff; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.3s; white-space: nowrap; }
-  #saveBtn:hover { background: #5568d3; }
-  #saveBtn:disabled { background: #aaa; cursor: not-allowed; }
+  
+  .btn-save { padding: 14px 24px; background: #27ae60; color: #fff; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.3s; white-space: nowrap; }
+  .btn-save:hover { background: #219653; }
+  .btn-save:disabled { background: #aaa; cursor: not-allowed; }
+  
+  .btn-cancel { padding: 14px; background: transparent; color: #e74c3c; border: none; font-weight: 600; cursor: pointer; }
+  .btn-cancel:hover { text-decoration: underline; }
   
   .search-box { position: relative; margin-bottom: 20px; }
   .search-box::before { content: '🔍'; position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 1rem; opacity: 0.6; pointer-events: none; }
-  #searchInput { width: 100%; padding-left: 42px; }
+  #searchInput { width: 100%; padding-left: 42px; border-color: #e0e0e0; }
   
   .link-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
   .link-item { display: flex; align-items: flex-start; gap: 12px; background: #f7f8fc; padding: 14px 16px; border-radius: 10px; border-left: 4px solid #667eea; animation: fadeIn 0.3s ease; }
@@ -122,9 +181,7 @@
   
   @media (max-width: 480px) { 
     .row { flex-direction: column; } 
-    #saveBtn { width: 100%; } 
-    .secret-arrow-btn { top: -15px; right: 15px; width: 35px; height: 35px; font-size: 1rem; } 
-    .status-badge { top: -15px; left: 15px; } 
+    .btn-save { width: 100%; } 
   }
 </style>
 </head>
@@ -139,20 +196,30 @@
 </div>
 
 <div class="container">
-  <!-- Tombol mengambang di atas border container -->
-  <div class="status-badge online" id="statusBadge" title="Klik untuk cek koneksi manual">
-    <div class="status-dot"></div>
-    <span id="statusText">Online</span>
+  
+  <!-- BARIS STATUS & PANAH -->
+  <div class="top-action-bar">
+    <div class="status-badge online" id="statusBadge" title="Klik untuk cek koneksi manual">
+      <div class="status-dot"></div>
+      <span id="statusText">Online</span>
+    </div>
+
+    <button class="secret-arrow-btn" id="secretArrowBtn" title="Menu Daftar Akun">➔</button>
   </div>
 
-  <button class="secret-arrow-btn" id="secretArrowBtn" title="Menu Daftar Akun">➔</button>
+  <!-- TOMBOL TAMBAH (+) -->
+  <button class="add-link-toggle" id="toggleAddLink">
+    ➕ Tambah Link Baru
+  </button>
 
-  <div class="form-group">
+  <!-- FORM YANG TERSEMBUNYI -->
+  <div class="form-group" id="addLinkForm">
     <input type="text" id="titleInput" placeholder="Judul link (contoh: Google)" />
     <div class="row">
       <input type="url" id="linkInput" placeholder="Tempel link di sini (https://...)" />
-      <button id="saveBtn">Simpan</button>
+      <button class="btn-save" id="saveBtn">Simpan</button>
     </div>
+    <button class="btn-cancel" id="cancelAddBtn">Batal</button>
   </div>
 
   <div class="search-box">
@@ -195,7 +262,7 @@
 <script>
   // ============ KONFIGURASI SUPABASE ============
   const SUPABASE_URL = 'https://ztwquwwjrqltxrrgwgvv.supabase.co';
-  const SUPABASE_ANON_KEY = 'sb_publishable_ddB2P1QFGIIwVA1Z-s48WQ_Iog9RPD4'; 
+  const SUPABASE_ANON_KEY = 'sb_publishable_fXjaAI4FYxC5etIhEGF5LA_CLV7u0NN'; 
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // ============ STATE ============
@@ -316,6 +383,10 @@
   if (window.location.search.includes('debug=1')) document.getElementById('debugPanel').classList.add('show');
 
   // ============ ELEMEN DOM ============
+  const toggleAddLink = document.getElementById('toggleAddLink');
+  const addLinkForm = document.getElementById('addLinkForm');
+  const cancelAddBtn = document.getElementById('cancelAddBtn');
+  
   const titleInput = document.getElementById('titleInput');
   const linkInput = document.getElementById('linkInput');
   const searchInput = document.getElementById('searchInput');
@@ -338,6 +409,20 @@
   const accPassword = document.getElementById('accPassword');
   const saveAccountBtn = document.getElementById('saveAccountBtn');
   const accountListContainer = document.getElementById('accountListContainer');
+
+  // ============ TOGGLE FORM TAMBAH LINK ============
+  toggleAddLink.addEventListener('click', () => {
+    addLinkForm.classList.add('show');
+    toggleAddLink.style.display = 'none';
+    titleInput.focus();
+  });
+
+  cancelAddBtn.addEventListener('click', () => {
+    addLinkForm.classList.remove('show');
+    toggleAddLink.style.display = 'flex';
+    titleInput.value = '';
+    linkInput.value = '';
+  });
 
   // ============ FUNGSI LINK ============
   async function fetchLinks() {
@@ -383,6 +468,8 @@
       }));
       allLinks = [...offlineMapped, ...allLinks.filter(l => !l.isOffline)];
       renderLinks();
+      // Tutup form kembali
+      cancelAddBtn.click(); 
       return;
     }
 
@@ -395,6 +482,8 @@
       titleInput.value = ''; linkInput.value = '';
       currentPage = 1;
       await fetchLinks();
+      // Tutup form kembali
+      cancelAddBtn.click();
     } catch (err) {
       if (!err.message.includes('timeout')) showErrorToast(`Gagal: ${err.message}`);
     } finally {
